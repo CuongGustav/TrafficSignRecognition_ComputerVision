@@ -3,7 +3,7 @@ from ultralytics import YOLO
 from PIL import Image
 
 # Load YOLO model
-model = YOLO('./best4.pt')
+model = YOLO('./best.pt')
 
 # Function to perform object detection on an image
 def detect_objects(image_path):

@@ -16,7 +16,7 @@ def detect_objects(image_path):
         image.save(output_path)
 
 # Thư mục chứa ảnh đầu vào
-input_folder = 'image/test'
+input_folder = 'test'
 
 # Tạo thư mục output nếu chưa tồn tại
 output_folder = 'output'

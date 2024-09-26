@@ -1,54 +1,59 @@
-import cv2
-import cvzone
-import math
 from ultralytics import YOLO
+import matplotlib.pyplot as plt
+import cv2
 
-cap = cv2.VideoCapture('tenvideo.mp4')
+# Load YOLO models
+yolo_sign_model = YOLO('./best.pt')  # Mô hình phát hiện biển báo
+yolo_object_model = YOLO('./best2.pt')  # Mô hình phân loại đối tượng
 
-model = YOLO('best.pt')
+# Hàm phát hiện và hiển thị
+def detect_and_display(image_path):
+    # Load image
+    img = cv2.imread(image_path)
 
-classnames = []
-with open('classes.txt', 'r') as f:
-    classnames = f.read().splitlines()
+    # Phát hiện biển báo giao thông
+    results_signs = yolo_sign_model(image_path)
 
+    # Vẽ bounding boxes cho biển báo giao thông
+    for result in results_signs:
+        for box in result.boxes:  # Truy cập vào boxes
+            x1, y1, x2, y2 = box.xyxy[0].tolist()  # Chuyển đổi thành danh sách và lấy tọa độ
 
-while True:
-    ret, frame = cap.read()
-    frame = cv2.resize(frame, (980,740))
+            # Crop ảnh trong bounding box
+            cropped_img = img[int(y1):int(y2), int(x1):int(x2)]
 
-    results = model(frame)
-
-    for info in results:
-        parameters = info.boxes
-        for box in parameters:
-            x1, y1, x2, y2 = box.xyxy[0]
-            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-            confidence = box.conf[0]
-            class_detect = box.cls[0]
-            class_detect = int(class_detect)
-            class_detect = classnames[class_detect]
-            conf = math.ceil(confidence * 100)
-
-
-            # implement fall detection using the coordinates x1,y1,x2
-            height = y2 - y1
-            width = x2 - x1
-            threshold  = height - width
-
-            if conf > 80 and class_detect == 'person':
-                cvzone.cornerRect(frame, [x1, y1, width, height], l=30, rt=6)
-                cvzone.putTextRect(frame, f'{class_detect}', [x1 + 8, y1 - 12], thickness=2, scale=2)
+            # Phân loại đối tượng trong bounding box
+            predictions = yolo_object_model(cropped_img)  # Dùng mô hình phân loại cho ảnh đã cắt
             
-            if threshold < 0:
-                cvzone.putTextRect(frame, 'Fall Detected', [height, width], thickness=2, scale=2)
+            # Biến để kiểm tra xem có nhãn nào hợp lệ không
+            has_label = False
             
-            else:pass
+            # Lặp qua các dự đoán và vẽ nhãn
+            for pred in predictions:
+                for box in pred.boxes:
+                    # Lấy điểm tin cậy và lớp dự đoán
+                    confidence = box.conf[0].item()
+                    class_id = int(box.cls[0].item())
+                    
+                    # Kiểm tra nếu confidence đủ lớn
+                    if confidence > 0.2:  # Chỉ vẽ nếu confidence > 0.2
+                        # Lấy tên lớp từ chính mô hình (thuộc tính 'names')
+                        label_name = yolo_object_model.names[class_id]
+                        cv2.rectangle(img, (int(x1), int(y1)), (int(x2), int(y2)), (255, 0, 0), 5)  # Vẽ box màu xanh
+                        cv2.putText(img, f"{label_name}: {confidence:.2f}", (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 0, 0), 5)  # Vẽ nhãn
+                        has_label = True  # Đánh dấu là có nhãn hợp lệ
 
+            # Nếu không có nhãn hợp lệ thì không vẽ bounding box cho biển báo giao thông
 
-    cv2.imshow('frame', frame)
-    if cv2.waitKey(1) & 0xFF == ord('t'):
-        break
+    # Hiển thị hình ảnh với bounding boxes và nhãn
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    plt.imshow(img_rgb)
+    plt.title('Phát hiện đối tượng và biển báo giao thông')
+    plt.axis('off')  # Tắt trục để hiển thị sạch hơn
+    plt.show()
 
+# Đường dẫn tới hình ảnh
+image_path = 't3.jpg'
 
-cap.release()
-cv2.destroyAllWindows()
+# Phát hiện và hiển thị
+detect_and_display(image_path)

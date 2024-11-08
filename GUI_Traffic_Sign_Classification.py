@@ -20,7 +20,7 @@ from tensorflow.keras.models import load_model
 
 # Load the trained model to classify signs
 def load_traffic_classifier():
-    model = load_model('model.h5')
+    model = load_model('model_tt.h5')
 
     # Dictionary to label all traffic signs class
 
